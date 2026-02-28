@@ -1,4 +1,4 @@
-// script.js - Code complet pour la gestion du statut de l'imprimante, l'affichage et la suppression des fichiers
+// script.js - Complete code for printer status management, file display, upload, and deletion
 
 let selectedFile = null;
 
@@ -20,50 +20,40 @@ function loadPrinterIP() {
         });
 }
 
-document.addEventListener('DOMContentLoaded', (event) => {
-    loadPrinterIP();
-});
-
-// setInterval(loadPrinterIP, 5000); // Mettre    jour le statut toutes les 5 secondes
-
+// Save the IP address to the server
 function saveIP() {
     let ipField = document.getElementById('printer-ip');
-    let saveBtn = document.querySelector('.save-ip-btn'); // Sélection du bouton Save
+    let saveBtn = document.querySelector('.save-ip-btn');
     let newIP = ipField.value;
 
     fetch('/set-printer-ip', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip: newIP }),
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            alert('Printer IP updated!');
-            ipField.readOnly = true; // Rendre le champ IP en lecture seule à nouveau
-            saveBtn.style.display = 'none'; // Cacher le bouton Save
-        } else {
-            console.error('Error saving IP:', data.error);
-        }
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert('Printer IP updated!');
+                ipField.readOnly = true; // Make IP field read-only again
+                saveBtn.style.display = 'none'; // Hide Save button
+            } else {
+                console.error('Error saving IP:', data.error);
+            }
+        });
 }
 
+// Enable editing of the IP field
 function editIP() {
     let ipField = document.getElementById('printer-ip');
-    let saveBtn = document.querySelector('.save-ip-btn'); // Sélection du bouton Save
+    let saveBtn = document.querySelector('.save-ip-btn');
 
     ipField.readOnly = false;
     ipField.focus();
     ipField.select();
 
-    saveBtn.style.display = 'inline-block'; // Afficher le bouton Save
+    saveBtn.style.display = 'inline-block'; // Show Save button
 }
-
-
-
-// script.js - Code complet pour la gestion du statut de l'imprimante, l'affichage, l'upload et la suppression des fichiers
-
-// ... les fonctions existantes ...
 
 function uploadFile() {
     let input = document.createElement('input');
@@ -78,43 +68,41 @@ function uploadFile() {
         let xhr = new XMLHttpRequest();
         xhr.open('POST', '/upload', true);
 
-        xhr.upload.onprogress = function(e) {
+        xhr.upload.onprogress = function (e) {
             if (e.lengthComputable) {
                 let percentComplete = (e.loaded / e.total) * 100;
                 updateLoadingPercentage(percentComplete);
             }
         };
 
-        xhr.onloadstart = function(e) {
-            updateLoadingPercentage(0); // Initialisation de la barre de progression à 0%
+        xhr.onloadstart = function (e) {
+            updateLoadingPercentage(0); // Initialize progress bar at 0%
         };
 
-        xhr.onload = function() {
+        xhr.onload = function () {
             if (xhr.status === 200) {
-                updateLoadingPercentage(100); // Terminé, fixez la barre de progression à 100%
+                updateLoadingPercentage(100); // Complete, set progress to 100%
                 hideLoadingIndicator();
                 alert('Upload complete!');
-                fetchFiles(); // Mettre à jour la liste après l'upload
+                fetchFiles(); // Refresh list after upload
             } else {
                 alert('An error occurred during the upload.');
             }
         };
 
-        xhr.onerror = function() {
+        xhr.onerror = function () {
             hideLoadingIndicator();
             alert('An error occurred during the upload.');
         };
 
         xhr.send(formData);
     };
-    input.click(); // Ouvrir le dialogue de sélection de fichier
+    input.click(); // Open file selection dialog
 }
-
 
 function printSelectedFile() {
     if (selectedFile) {
         showLoadingIndicator('Preparing print...');
-        checkProgress(selectedFile); // Commencer à vérifier l'état d'avancement
 
         fetch('/print-file', {
             method: 'POST',
@@ -123,15 +111,22 @@ function printSelectedFile() {
             },
             body: JSON.stringify({ filename: selectedFile }),
         })
-        .then(response => response.json())
-        .then(data => {
-            updatePrintProgress(50); // Mise à jour à 50% après la fin de printSelectedFile
-            alert(data.message); // Affichez un message à l'utilisateur
-        })
-        .catch(error => {
-            hideLoadingIndicator();
-            console.error('Error:', error);
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    hideLoadingIndicator();
+                } else {
+                    checkProgress(selectedFile); // Start polling for progress
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                hideLoadingIndicator();
+                console.error('Error:', error);
+            });
+    } else {
+        alert("Please select a file first.");
     }
 }
 
@@ -139,32 +134,28 @@ function updatePrintProgress(percent) {
     showLoadingIndicator(`Printing... (${percent}%)`);
     updateLoadingPercentage(percent);
 
-
     if (percent >= 100) {
-        setTimeout(hideLoadingIndicator, 1000); // Masquer la roue crantée après un bref délai pour permettre à l'utilisateur de voir que l'impression est terminée
+        // Hide the loading indicator after a short delay so the user sees completion
+        setTimeout(hideLoadingIndicator, 1000);
     }
 }
 
-
-
-
-// Fonction pour afficher l'indicateur de chargement avec message et pourcentage
+// Show the loading indicator with message and percentage
 function showLoadingIndicator(message) {
-    // Créez et affichez ici une roue crantée et le message de pourcentage
-    // Vous pouvez utiliser une div avec un spinner CSS ou une image de roue crantée
     let loadingDiv = document.getElementById('loading-indicator');
     if (!loadingDiv) {
         loadingDiv = document.createElement('div');
         loadingDiv.id = 'loading-indicator';
         loadingDiv.innerHTML = `
             <div class="loading-spinner"></div>
-            <p>${message}</p>
+            <p id="loading-msg">${message}</p>
             <p id="loading-percentage">0%</p>`;
         document.body.appendChild(loadingDiv);
+    } else {
+        document.getElementById('loading-msg').innerText = message;
     }
 }
 
-// Fonction pour masquer l'indicateur de chargement
 function hideLoadingIndicator() {
     let loadingDiv = document.getElementById('loading-indicator');
     if (loadingDiv) {
@@ -172,21 +163,12 @@ function hideLoadingIndicator() {
     }
 }
 
-
-
-
-
 function updateLoadingPercentage(percent) {
-    // Mettre à jour l'interface utilisateur avec la progression de l'upload
     let percentageText = document.getElementById('loading-percentage');
     if (percentageText) {
         percentageText.innerText = `${percent.toFixed(2)}%`;
     }
-    // Si vous avez une barre de progression, mettez également à jour sa largeur ici
 }
-
-
-// ... le reste de votre script ...
 
 function checkProgress(filename) {
     fetch(`/progress/${filename}`)
@@ -194,16 +176,11 @@ function checkProgress(filename) {
         .then(data => {
             updatePrintProgress(data.progress);
             if (data.progress < 100) {
-                setTimeout(() => checkProgress(filename), 1000); // Interroger toutes les secondes
+                setTimeout(() => checkProgress(filename), 1000); // Poll every second
             }
         })
         .catch(error => console.error('Error:', error));
 }
-
-
-//
-
-
 
 function fetchPrintStatus() {
     fetch('/print-status')
@@ -212,42 +189,56 @@ function fetchPrintStatus() {
             document.getElementById('status').innerText = data.status;
             let progressBar = document.getElementById('progress-bar');
             let progressText = document.getElementById('progress-text');
+
             let progressValue = parseFloat(data.progress).toFixed(2);
-            progressBar.style.width = progressValue + '%';
-            progressText.innerText = progressValue + '%';
-            // Mettre    jour la capsule ONLINE/OFFLINE
+            if (progressBar) progressBar.style.width = progressValue + '%';
+            if (progressText) progressText.innerText = progressValue + '%';
+
+            // Update ONLINE/OFFLINE capsule
             const onlineStatusElement = document.getElementById('online-status');
-            if (data.is_online) {
-                onlineStatusElement.classList.remove('offline');
-                onlineStatusElement.classList.add('online');
-                onlineStatusElement.textContent = 'ONLINE';
-            } else {
-                onlineStatusElement.classList.remove('online');
-                onlineStatusElement.classList.add('offline');
-                onlineStatusElement.textContent = 'OFFLINE';
+            if (onlineStatusElement) {
+                if (data.is_online) {
+                    onlineStatusElement.className = 'online-status online';
+                    onlineStatusElement.textContent = 'ONLINE';
+                } else {
+                    onlineStatusElement.className = 'online-status offline';
+                    onlineStatusElement.textContent = 'OFFLINE';
+                }
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('status').innerText = 'Erreur de chargement du statut.';
+            document.getElementById('status').innerText = 'Error loading status.';
         });
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function fetchFiles() {
     fetch('/files')
         .then(response => response.json())
         .then(filesInfo => {
-            let tableRows = filesInfo.map(fileInfo =>
-                `<tr onclick="selectFile('${fileInfo.name}')">
-                    <td>${fileInfo.name}</td>
-                    <td>${fileInfo.size} Mo</td>
-                </tr>`
-            ).join('');
-            document.getElementById('file-list').querySelector('tbody').innerHTML = tableRows;
+            const tbody = document.getElementById('file-list').querySelector('tbody');
+            tbody.innerHTML = '';
+            filesInfo.forEach(fileInfo => {
+                const tr = document.createElement('tr');
+                if (selectedFile === fileInfo.name) tr.classList.add('selected');
+                tr.addEventListener('click', () => selectFile(fileInfo.name));
+                const tdName = document.createElement('td');
+                tdName.textContent = fileInfo.name;
+                const tdSize = document.createElement('td');
+                tdSize.textContent = fileInfo.size + ' MB';
+                tr.appendChild(tdName);
+                tr.appendChild(tdSize);
+                tbody.appendChild(tr);
+            });
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('file-list').querySelector('tbody').innerHTML = '<tr><td colspan="2">Erreur de chargement des fichiers.</td></tr>';
+            document.getElementById('file-list').querySelector('tbody').innerHTML = '<tr><td colspan="2">Error loading files.</td></tr>';
         });
 }
 
@@ -256,15 +247,17 @@ function selectFile(filename) {
     document.querySelectorAll('.file-list tr').forEach(tr => {
         tr.classList.remove('selected');
     });
-    const selectedRow = [...document.querySelectorAll('.file-list tr')].find(tr => tr.cells[0].textContent === filename);
+    const rows = [...document.querySelectorAll('.file-list tr')];
+    const selectedRow = rows.find(tr => tr.cells[0].textContent === filename);
     if (selectedRow) {
         selectedRow.classList.add('selected');
     }
 }
 
-
 function deleteSelectedFile() {
     if (selectedFile) {
+        if (!confirm(`Are you sure you want to delete ${selectedFile}?`)) return;
+
         fetch('/delete-file', {
             method: 'POST',
             headers: {
@@ -272,13 +265,15 @@ function deleteSelectedFile() {
             },
             body: JSON.stringify({ filename: selectedFile }),
         })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message); // Affichez un message à l'utilisateur
-            fetchFiles(); // Mettre à jour la liste après la suppression
-        })
-        .catch(error => console.error('Error:', error));
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                selectedFile = null;
+                fetchFiles();
+            })
+            .catch(error => console.error('Error:', error));
     }
 }
 
-setInterval(fetchPrintStatus, 5000); // Mettre à jour le statut toutes les 5 secondes
+// Automatically update status every 5 seconds
+setInterval(fetchPrintStatus, 5000);

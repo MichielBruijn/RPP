@@ -13,37 +13,37 @@ import json
 import asyncio
 import logging
 import random
-from enum import Enum
+from enum import IntEnum
 
 SATURN_UDP_PORT = 3000
 
 # CurrentStatus field inside Status
-class CurrentStatus(Enum):
+class CurrentStatus(IntEnum):
     READY = 0
-    BUSY = 1 # Printer might be sitting at the "Completed" screen
-    # SATURN_STATUS_BUSY_2 = 1 # post-HEAD call on file transfer, along with SATURN_FILE_STATUS = 3 on error, and 2 on completion
+    BUSY = 1
 
 # Status field inside PrintInfo
-class PrintInfoStatus(Enum):
-    # TODO: double check these
-    EXPOSURE = 2 
+class PrintInfoStatus(IntEnum):
+    IDLE = 0
+    PRINTING = 1
+    EXPOSURE = 2
     RETRACTING = 3
     LOWERING = 4
-    COMPLETE = 16 # pretty sure this is correct
+    COMPLETE = 16
 
 # Status field inside FileTransferInfo
-class FileStatus(Enum):
+class FileStatus(IntEnum):
     NONE = 0
     DONE = 2
     ERROR = 3
 
-class Command(Enum):
-    CMD_0 = 0 # null data
-    CMD_1 = 1 # null data
-    DISCONNECT = 64 # Maybe disconnect?
-    START_PRINTING = 128 # "Filename": "X", "StartLayer": 0
-    UPLOAD_FILE = 256 # "Check": 0, "CleanCache": 1, "Compress": 0, "FileSize": 3541068, "Filename": "_ResinXP2-ValidationMatrix_v2.goo", "MD5": "205abc8fab0762ad2b0ee1f6b63b1750", "URL": "http://${ipaddr}:58883/f60c0718c8144b0db48b7149d4d85390.goo" },
-    SET_MYSTERY_TIME_PERIOD = 512 # "TimePeriod": 5000
+class Command(IntEnum):
+    CMD_0 = 0
+    CMD_1 = 1
+    DISCONNECT = 64
+    START_PRINTING = 128
+    UPLOAD_FILE = 256
+    SET_MYSTERY_TIME_PERIOD = 512
 
 def random_hexstr():
     return '%032x' % random.getrandbits(128)
@@ -78,20 +78,19 @@ class SaturnPrinter:
                 except socket.timeout:
                     continue
                 else:
-                    #logging.debug(f'Found printer at {addr}')
                     pdata = json.loads(data.decode('utf-8'))
                     printers.append(SaturnPrinter(addr, pdata))
         return printers
 
     # Find a specific printer at the given address, return a SaturnPrinter object
-    # or None if no response is obtained 
+    # or None if no response is obtained
     def find_printer(addr, timeout=5):
         printers = SaturnPrinter.find_printers(broadcast=addr)
         if len(printers) == 0 or printers[0].addr[0] != addr:
             return None
         return printers[0]
 
-    # Refresh this SaturnPrinter with latest status 
+    # Refresh this SaturnPrinter with latest status
     def refresh(self, timeout=5):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         with sock:
@@ -107,7 +106,7 @@ class SaturnPrinter:
 
     def set_desc(self, desc):
         self.desc = desc
-        self.id = desc['Data']['Attributes']['MainboardID'] 
+        self.id = desc['Data']['Attributes']['MainboardID']
         self.name = desc['Data']['Attributes']['Name']
         self.machine_name = desc['Data']['Attributes']['MachineName']
         self.current_status = desc['Data']['Status']['CurrentStatus']
@@ -161,7 +160,7 @@ class SaturnPrinter:
         if ext != 'ctb' and ext != 'goo':
             logging.warning(f"Unknown file extension: {ext}")
 
-        httpname = random_hexstr() + '.' + ext 
+        httpname = random_hexstr() + '.' + ext
         fileinfo = self.http.register_file_route('/' + httpname, filename)
 
         cmd_data = {
@@ -191,8 +190,6 @@ class SaturnPrinter:
                 total_size = file_info['FileTotalSize']
                 file_name = file_info['Filename']
 
-                # We assume that the printer immediately goes into BUSY status after it processes
-                # the upload command
                 if status['CurrentStatus'] == CurrentStatus.READY:
                     if file_info['Status'] == FileStatus.DONE:
                         self.file_transfer_future.set_result((total_size, total_size, file_name))
@@ -207,15 +204,22 @@ class SaturnPrinter:
                 self.file_transfer_future.set_result((current_offset, total_size, file_name))
                 self.file_transfer_future = asyncio.get_running_loop().create_future()
             elif reply['topic'] == "/sdcp/attributes/" + self.id:
-                # ignore these
                 pass
             else:
                 logging.warning(f"Got unknown topic message: {reply['topic']}")
 
         self.file_transfer_future = None
 
+        # Start printing over the same MQTT connection if requested
+        if start_printing and file_name:
+            logging.info(f"Upload complete, starting print: {file_name}")
+            await self.send_command_and_wait(Command.START_PRINTING, {
+                "Filename": file_name,
+                "StartLayer": 0
+            })
+            logging.info("Print command sent successfully")
+
     async def send_command_and_wait(self, cmdid, data=None, abort_on_bad_ack=True):
-        # Send the 0 and 1 messages
         req = self.send_command(cmdid, data)
         logging.debug(f"Sent command {cmdid} as request {req}")
         while True:
@@ -232,7 +236,6 @@ class SaturnPrinter:
             elif reply['topic'] == "/sdcp/status/" + self.id:
                 self.incoming_status(data['Data']['Status'])
             elif reply['topic'] == "/sdcp/attributes/" + self.id:
-                # ignore these
                 pass
             else:
                 logging.warning(f"Got unknown topic message: {reply['topic']}")
@@ -274,7 +277,6 @@ class SaturnPrinter:
                     return False
 
             elif reply['topic'] == "/sdcp/attributes/" + self.id:
-                # ignore these
                 pass
             else:
                 logging.warning(f"Got unknown topic message: {reply['topic']}")
@@ -293,7 +295,7 @@ class SaturnPrinter:
     def describe(self):
         attrs = self.desc['Data']['Attributes']
         return f"{attrs['Name']} ({attrs['MachineName']})"
-    
+
     def status(self):
         printinfo = self.desc['Data']['Status']['PrintInfo']
         return {
@@ -304,7 +306,6 @@ class SaturnPrinter:
         }
 
     def send_command(self, cmdid, data=None):
-        # generate 16-byte random identifier as a hex string
         hexstr = random_hexstr()
         timestamp = int(time.time() * 1000)
         cmd_data = {

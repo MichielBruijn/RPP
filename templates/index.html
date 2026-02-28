@@ -1,61 +1,64 @@
-<!-- index.html - Code complet -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <title>RPP Resin Print Portal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPP Resin Print Portal</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
-    <div class="header">
-        <img src="{{ url_for('static', filename='LOGO-RESIN-PRINT-PORTAL.png') }}" alt="Resin Print Portal Logo" class="logo">
 
-<div class="printer-ip-container">
-    <div id="online-indicator">
-        <span id="online-status" class="online-status offline">OFFLINE</span>
+<header class="header">
+  <img src="{{ url_for('static', filename='LOGO-RESIN-PRINT-PORTAL.png') }}" alt="Resin Print Portal Logo" class="logo">
+  <div class="header-right">
+    <span id="online-status" class="online-status offline">OFFLINE</span>
+    <div class="ip-row">
+      <input type="text" id="printer-ip" readonly placeholder="Printer IP">
+      <button onclick="editIP()" class="btn btn-edit">Edit</button>
+      <button onclick="saveIP()" class="btn btn-save">Save</button>
     </div>
-    <input type="text" id="printer-ip" readonly>
-    <button onclick="editIP()" class="edit-ip-btn">Edit</button>
-    <button onclick="saveIP()" class="save-ip-btn">Save</button>
-    </div>
-</div>
+  </div>
+</header>
 
-    <div class="container">
-        <div id="status" class="status-text">Chargement...</div>
-        <div class="progress-container">
-            <div class="progress-bar" id="progress-bar"></div>
-            <span class="progress-text" id="progress-text">0%</span>
-        </div>
-    </div>
+<main class="main">
 
-<div class="file-management-container">
-    <table class="file-list" id="file-list">
+  <section class="card status-card">
+    <h2 class="card-title">Printer Status</h2>
+    <div id="status" class="status-text">Laden...</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+      <span class="progress-text" id="progress-text">0%</span>
+    </div>
+  </section>
+
+  <section class="card files-card">
+    <h2 class="card-title">Bestanden</h2>
+    <div class="table-wrapper">
+      <table class="file-list" id="file-list">
         <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Taille (Mo)</th>
-            </tr>
+          <tr>
+            <th>Naam</th>
+            <th>Grootte</th>
+          </tr>
         </thead>
-        <tbody>
-            <!-- Les lignes du tableau seront insérées ici par JavaScript -->
-        </tbody>
-    </table>
-    <!-- Le reste de vos boutons et éléments -->
-    <div class="action-buttons">
-        <button class="action-button upload-button" onclick="uploadFile()">Upload</button>
-        <button class="action-button print-button" onclick="printSelectedFile()">Print</button>
-        <button class="action-button delete-button" onclick="deleteSelectedFile()">Delete</button>
+        <tbody></tbody>
+      </table>
     </div>
-</div>
+    <div class="action-buttons">
+      <button class="btn btn-upload" onclick="uploadFile()">&#8679; Upload</button>
+      <button class="btn btn-print" onclick="printSelectedFile()">&#9654; Print</button>
+      <button class="btn btn-delete" onclick="deleteSelectedFile()">&#10005; Verwijder</button>
+    </div>
+  </section>
 
+</main>
 
-    <!-- Ensure the JS file link is correct -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <footer>
-        <p>2024 JJtronics</p>
-        <p>Projet sur GitHub : <a href="https://github.com/jjtronics/RPP" target="_blank">https://github.com/jjtronics/RPP</a></p>
-        <p>Visitez mon site web : <a href="https://www.jjtronics.com" target="_blank">https://www.jjtronics.com</a></p>
-    </footer>
+<footer class="footer">
+  <p>Gebaseerd op <a href="https://github.com/jjtronics/RPP" target="_blank">RPP</a> door JJtronics &mdash; gebruikt <a href="https://github.com/vvuk/cassini" target="_blank">Cassini</a> door Vladimir Vukicevic</p>
+  <p>Fork: <a href="https://github.com/MichielBruijn/RPP" target="_blank">github.com/MichielBruijn/RPP</a></p>
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

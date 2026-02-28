@@ -6,7 +6,7 @@ sudo apt install python3-flask
 sudo pip3 install alive-progress --break-system-packages
 
 cd /opt/
-git clone https://github.com/jjtronics/RPP.git
+git clone https://github.com/michielbruijn/RPP.git
 
 sudo chmod -R 775 /opt/RPP/uploads
 sudo chown -R www-data:www-data /opt/RPP/uploads

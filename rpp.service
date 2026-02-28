@@ -3,12 +3,11 @@ Description=Resin Print Portal
 After=network.target
 
 [Service]
+Environment=PYTHONUNBUFFERED=1
 User=www-data
-Group=www-data
 WorkingDirectory=/opt/RPP
-ExecStart=/usr/bin/python3 /opt/RPP/rpp.py
-Restart=on-failure
-KillSignal=SIGINT
+ExecStart=/opt/RPP/venv/bin/python3 /opt/RPP/rpp.py
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

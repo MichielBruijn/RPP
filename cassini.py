@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!env python3
 # -*- coding: utf-8 -*-
 #
 # Cassini
@@ -8,6 +7,8 @@
 # License: MIT
 #
 import os
+import pprint
+import socket
 import sys
 import time
 import asyncio
@@ -64,6 +65,10 @@ def do_status(printers):
         print(f"    File: {print_info['Filename']}")
         print(f"    File Transfer Status: {FileStatus(file_info['Status']).name}")
 
+def do_status_full(printers):
+    for i, p in enumerate(printers):
+        pprint.pprint(p.desc)
+
 def do_watch(printer, interval=5, broadcast=None):
     status = printer.status()
     with alive_bar(total=status['totalLayers'], manual=True, elapsed=False, title=status['filename']) as bar:
@@ -80,7 +85,6 @@ def do_watch(printer, interval=5, broadcast=None):
 async def create_servers():
     mqtt, mqtt_port, mqtt_task = await create_mqtt_server()
     http, http_port, http_task = await create_http_server()
-
     return mqtt, http
 
 async def do_print(printer, filename):
@@ -107,10 +111,8 @@ async def do_upload(printer, filename, start_printing=False):
     if not connected:
         logging.error("Failed to connect to printer")
         sys.exit(1)
-    
-    #await printer.upload_file(filename, start_printing=start_printing)
+
     upload_task = asyncio.create_task(printer.upload_file(filename, start_printing=start_printing))
-    # grab the first one, because we want the file size
     basename = filename.split('\\')[-1].split('/')[-1]
     file_size = os.path.getsize(filename)
     with alive_bar(total=file_size, manual=True, elapsed=False, title=basename) as bar:
@@ -129,23 +131,27 @@ async def do_upload(printer, filename, start_printing=False):
 
 def main():
     parser = argparse.ArgumentParser(prog='cassini', description='ELEGOO Saturn printer control utility')
-    parser.add_argument('-p', '--printer', help='ID of printer to target')
+    parser.add_argument('-p', '--printer', help='IP address of printer to target')
     parser.add_argument('--broadcast', help='Explicit broadcast IP address')
     parser.add_argument('--debug', help='Enable debug logging', action='store_true')
 
     subparsers = parser.add_subparsers(title="commands", dest="command", required=True)
 
-    parser_status = subparsers.add_parser('status', help='Discover and display status of all printers')
+    subparsers.add_parser('status', help='Discover and display status of all printers')
+    subparsers.add_parser('status-full', help='Discover and display full raw status of all printers')
 
     parser_watch = subparsers.add_parser('watch', help='Continuously update the status of the selected printer')
     parser_watch.add_argument('--interval', type=int, help='Status update interval (seconds)', default=5)
 
-    parser_upload = subparsers.add_parser('upload', help='Upload a file to the printer') 
+    parser_upload = subparsers.add_parser('upload', help='Upload a file to the printer')
     parser_upload.add_argument('--start-printing', help='Start printing after upload is complete', action='store_true')
     parser_upload.add_argument('filename', help='File to upload')
 
-    parser_print = subparsers.add_parser('print', help='Start printing a file already present on the printer') 
+    parser_print = subparsers.add_parser('print', help='Start printing a file already present on the printer')
     parser_print.add_argument('filename', help='File to print')
+
+    parser_connect_mqtt = subparsers.add_parser('connect-mqtt', help='Connect printer to particular MQTT server')
+    parser_connect_mqtt.add_argument('address', help='MQTT host and port, e.g. "192.168.1.33:1883" or "mqtt.local:1883"')
 
     args = parser.parse_args()
 
@@ -171,6 +177,19 @@ def main():
     if args.command == "status":
         do_status(printers)
         sys.exit(0)
+
+    if args.command == "status-full":
+        do_status_full(printers)
+        sys.exit(0)
+
+    if args.command == "connect-mqtt":
+        mqtt_host, mqtt_port = args.address.split(':')
+        try:
+            mqtt_host = socket.gethostbyname(mqtt_host)
+        except socket.gaierror:
+            pass
+        for p in printers:
+            p.connect_mqtt(mqtt_host, mqtt_port)
 
     if args.command == "watch":
         do_watch(printer, interval=args.interval, broadcast=broadcast)
