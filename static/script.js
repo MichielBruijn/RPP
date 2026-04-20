@@ -1,4 +1,4 @@
-// script.js - Complete code for printer status management, file display, upload, and deletion
+// script.js - Printer status polling, file management, upload, print control (pause/resume/stop)
 
 let selectedFile = null;
 
@@ -34,12 +34,12 @@ function saveIP() {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                alert('Printer adres opgeslagen!');
+                alert('Printer address saved!');
                 ipField.readOnly = true;
                 saveBtn.style.display = 'none';
             } else {
                 console.error('Error saving IP:', data.error);
-                alert('Fout bij opslaan: ' + data.error);
+                alert('Error saving: ' + data.error);
             }
         });
 }
@@ -194,7 +194,6 @@ function fetchPrintStatus() {
             if (progressBar) progressBar.style.width = progressValue + '%';
             if (progressText) progressText.innerText = progressValue + '%';
 
-            // Update ONLINE/OFFLINE capsule
             const onlineStatusElement = document.getElementById('online-status');
             if (onlineStatusElement) {
                 if (data.is_online) {
@@ -205,10 +204,51 @@ function fetchPrintStatus() {
                     onlineStatusElement.textContent = 'OFFLINE';
                 }
             }
+
+            const controls = document.getElementById('print-controls');
+            const btnPause = document.getElementById('btn-pause');
+            const btnResume = document.getElementById('btn-resume');
+            const isPausedHW = data.is_online && data.status && data.status.includes('PAUSED_HW');
+            const isPausedLifted = !isPausedHW && data.is_online && data.status && data.status.includes('PAUSED_LIFTED');
+            const isPaused = isPausedHW || isPausedLifted;
+            const isBusy = data.is_online && data.status && data.status.includes('BUSY');
+            if (controls) {
+                controls.style.display = (isBusy || isPaused) ? 'flex' : 'none';
+                if (btnPause) btnPause.style.display = isPaused ? 'none' : 'inline-block';
+                if (btnResume) btnResume.style.display = isPaused ? 'inline-block' : 'none';
+            }
         })
         .catch(error => {
             console.error('Error:', error);
             document.getElementById('status').innerText = 'Error loading status.';
+        });
+}
+
+function stopPrint() {
+    if (!confirm('Stop the current print?')) return;
+    fetch('/stop-print', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) alert('Error: ' + data.error);
+            else fetchPrintStatus();
+        });
+}
+
+function pausePrint() {
+    fetch('/pause-print', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) alert('Error: ' + data.error);
+            else fetchPrintStatus();
+        });
+}
+
+function resumePrint() {
+    fetch('/resume-print', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) alert('Error: ' + data.error);
+            else fetchPrintStatus();
         });
 }
 

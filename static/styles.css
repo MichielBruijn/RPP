@@ -9,7 +9,7 @@
     --bg:        #0f172a;
     --surface:   #1e293b;
     --border:    #334155;
-    --text:      #e2e8f0;
+    --text:      #ffffff;
     --muted:     #94a3b8;
     --accent:    #f97316;
     --accent-h:  #ea6c0a;
@@ -31,25 +31,23 @@ body {
 .header {
     background-color: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
+    padding: 14px 24px;
+}
+
+.header-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.03em;
+}
+
+/* === Printer meta row === */
+.printer-meta {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     flex-wrap: wrap;
-    gap: 12px;
-}
-
-.logo {
-    max-height: 80px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-}
-
-.header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    margin-bottom: 16px;
 }
 
 .ip-row {
@@ -66,6 +64,7 @@ body {
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .online-status.online {
@@ -108,6 +107,15 @@ body {
 
 .btn-delete { background-color: var(--red); }
 .btn-delete:hover { background-color: #dc2626; }
+
+.btn-stop   { background-color: var(--red); }
+.btn-stop:hover   { background-color: #dc2626; }
+
+.btn-pause  { background-color: #eab308; }
+.btn-pause:hover  { background-color: #ca8a04; }
+
+.btn-resume { background-color: var(--green); }
+.btn-resume:hover { background-color: #16a34a; }
 
 /* === Printer IP input === */
 #printer-ip {
@@ -252,6 +260,7 @@ body {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    margin-top: 16px;
 }
 
 .action-buttons .btn {
@@ -315,14 +324,9 @@ body {
 
 /* === Responsive === */
 @media (max-width: 600px) {
-    .header {
+    .printer-meta {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .header-right {
-        align-items: flex-start;
-        width: 100%;
     }
 
     .ip-row {

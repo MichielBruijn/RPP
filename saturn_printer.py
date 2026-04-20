@@ -29,7 +29,20 @@ class PrintInfoStatus(IntEnum):
     EXPOSURE = 2
     RETRACTING = 3
     LOWERING = 4
+    RETRACTING_END = 6
+    PAUSED_HW = 7
+    PAUSED_LIFTED = 8
+    STOPPING = 10
+    STOPPED = 13
+    PAUSED = 14
     COMPLETE = 16
+
+    @classmethod
+    def _missing_(cls, value):
+        obj = int.__new__(cls, value)
+        obj._name_ = f'UNKNOWN_{value}'
+        obj._value_ = value
+        return obj
 
 # Status field inside FileTransferInfo
 class FileStatus(IntEnum):
@@ -42,6 +55,9 @@ class Command(IntEnum):
     CMD_1 = 1
     DISCONNECT = 64
     START_PRINTING = 128
+    PAUSE_PRINTING = 129
+    STOP_PRINTING = 130
+    RESUME_PRINTING = 131
     UPLOAD_FILE = 256
     SET_MYSTERY_TIME_PERIOD = 512
 
@@ -244,6 +260,40 @@ class SaturnPrinter:
                 pass
             else:
                 logging.warning(f"Got unknown topic message: {reply['topic']}")
+
+    async def stop_print(self):
+        status = self.desc['Data']['Status']
+        if status['PrintInfo']['Status'] == PrintInfoStatus.PAUSED_HW:
+            # Paused via touchscreen or Pause button: resume briefly then stop
+            filename = status['PrintInfo']['Filename']
+            layer = status['PrintInfo']['CurrentLayer']
+            await self.send_command_and_wait(
+                Command.START_PRINTING,
+                {'Filename': filename, 'StartLayer': layer},
+                abort_on_bad_ack=False
+            )
+            await asyncio.sleep(1)
+        result = await self.send_command_and_wait(Command.STOP_PRINTING, abort_on_bad_ack=False)
+        return result.get('Ack', -1) == 0
+
+    async def pause_print(self):
+        result = await self.send_command_and_wait(Command.PAUSE_PRINTING, abort_on_bad_ack=False)
+        return result.get('Ack', -1) == 0
+
+    async def resume_print(self):
+        status = self.desc['Data']['Status']
+        print_status = status['PrintInfo']['Status']
+        if print_status in (PrintInfoStatus.PAUSED_LIFTED, PrintInfoStatus.PAUSED_HW):
+            result = await self.send_command_and_wait(Command.RESUME_PRINTING, None, abort_on_bad_ack=False)
+        else:
+            filename = status['PrintInfo']['Filename']
+            current_layer = status['PrintInfo']['CurrentLayer']
+            result = await self.send_command_and_wait(
+                Command.START_PRINTING,
+                {'Filename': filename, 'StartLayer': current_layer},
+                abort_on_bad_ack=False
+            )
+        return result.get('Ack', -1) == 0
 
     async def print_file(self, filename):
         cmd_data = {

@@ -1,45 +1,49 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RPP Resin Print Portal</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-<link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
 
 <header class="header">
-  <img src="{{ url_for('static', filename='LOGO-RESIN-PRINT-PORTAL.png') }}" alt="Resin Print Portal Logo" class="logo">
-  <div class="header-right">
-    <span id="online-status" class="online-status offline">OFFLINE</span>
-    <div class="ip-row">
-      <input type="text" id="printer-ip" readonly placeholder="IP of hostname">
-      <button onclick="editIP()" class="btn btn-edit">Edit</button>
-      <button onclick="saveIP()" class="btn btn-save">Save</button>
-    </div>
-  </div>
+  <span class="header-title">Resin Print Portal</span>
 </header>
 
 <main class="main">
 
   <section class="card status-card">
-    <h2 class="card-title">Printer Status</h2>
-    <div id="status" class="status-text">Laden...</div>
+    <h2 class="card-title">Printer</h2>
+    <div class="printer-meta">
+      <span id="online-status" class="online-status offline">OFFLINE</span>
+      <div class="ip-row">
+        <input type="text" id="printer-ip" readonly placeholder="IP or hostname">
+        <button onclick="editIP()" class="btn btn-edit">Edit</button>
+        <button onclick="saveIP()" class="btn btn-save">Save</button>
+      </div>
+    </div>
+    <div id="status" class="status-text">Loading...</div>
     <div class="progress-container">
       <div class="progress-bar" id="progress-bar"></div>
       <span class="progress-text" id="progress-text">0%</span>
     </div>
+    <div class="action-buttons" id="print-controls" style="display:none;">
+      <button class="btn btn-pause" id="btn-pause" onclick="pausePrint()">&#9646;&#9646; Pause</button>
+      <button class="btn btn-resume" id="btn-resume" onclick="resumePrint()" style="display:none;">&#9654; Resume</button>
+      <button class="btn btn-stop" onclick="stopPrint()">&#9632; Stop</button>
+    </div>
   </section>
 
   <section class="card files-card">
-    <h2 class="card-title">Bestanden</h2>
+    <h2 class="card-title">Files</h2>
     <div class="table-wrapper">
       <table class="file-list" id="file-list">
         <thead>
           <tr>
-            <th>Naam</th>
-            <th>Grootte</th>
+            <th>Name</th>
+            <th>Size</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -48,14 +52,14 @@
     <div class="action-buttons">
       <button class="btn btn-upload" onclick="uploadFile()">&#8679; Upload</button>
       <button class="btn btn-print" onclick="printSelectedFile()">&#9654; Print</button>
-      <button class="btn btn-delete" onclick="deleteSelectedFile()">&#10005; Verwijder</button>
+      <button class="btn btn-delete" onclick="deleteSelectedFile()">&#10005; Delete</button>
     </div>
   </section>
 
 </main>
 
 <footer class="footer">
-  <p>Gebaseerd op <a href="https://github.com/jjtronics/RPP" target="_blank">RPP</a> door JJtronics &mdash; gebruikt <a href="https://github.com/vvuk/cassini" target="_blank">Cassini</a> door Vladimir Vukicevic</p>
+  <p>Based on <a href="https://github.com/jjtronics/RPP" target="_blank">RPP</a> by JJtronics &mdash; uses <a href="https://github.com/vvuk/cassini" target="_blank">Cassini</a> by Vladimir Vukicevic</p>
   <p>Fork: <a href="https://github.com/MichielBruijn/RPP" target="_blank">github.com/MichielBruijn/RPP</a></p>
 </footer>
 

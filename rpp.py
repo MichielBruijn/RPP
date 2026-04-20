@@ -177,6 +177,35 @@ def print_file():
     return jsonify({'message': f'Uploading and printing {filename}...'})
 
 
+def _run_print_control(command):
+    printer_ip = read_printer_ip()
+    if printer_ip is None:
+        return jsonify({'error': 'Could not read printer IP address.'})
+    try:
+        cmd = ['./cassini.py', '-p', printer_ip, command]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        if result.returncode == 0:
+            return jsonify({'message': f'{command} successful'})
+        error_lines = [l for l in result.stderr.strip().splitlines() if 'ERROR' in l]
+        error_msg = error_lines[-1].split('ERROR:')[-1].strip() if error_lines else f'{command} failed'
+        return jsonify({'error': error_msg})
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Request timed out.'})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/stop-print', methods=['POST'])
+def stop_print():
+    return _run_print_control('stop')
+
+@app.route('/pause-print', methods=['POST'])
+def pause_print():
+    return _run_print_control('pause')
+
+@app.route('/resume-print', methods=['POST'])
+def resume_print():
+    return _run_print_control('resume')
+
 @app.route('/delete-file', methods=['POST'])
 def delete_file():
     filename = request.json.get('filename')

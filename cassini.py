@@ -87,6 +87,39 @@ async def create_servers():
     http, http_port, http_task = await create_http_server()
     return mqtt, http
 
+async def do_print_control(printer, action_fn, action_name):
+    for attempt in range(3):
+        try:
+            mqtt, http = await create_servers()
+            printer.timeout = 8
+            connected = await printer.connect(mqtt, http)
+            if not connected:
+                logging.error("Failed to connect to printer")
+                sys.exit(1)
+            ok = await action_fn(printer)
+            if ok:
+                logging.info(f"Print {action_name}")
+                return
+            else:
+                logging.error(f"{action_name.capitalize()} command rejected by printer (wrong state?)")
+                sys.exit(1)
+        except asyncio.TimeoutError:
+            if attempt < 2:
+                logging.warning(f"Connection timeout, retrying ({attempt+1}/3)...")
+                await asyncio.sleep(3)
+            else:
+                logging.error("Failed to connect to printer after 3 attempts")
+                sys.exit(1)
+
+async def do_stop(printer):
+    await do_print_control(printer, lambda p: p.stop_print(), "stopped")
+
+async def do_pause(printer):
+    await do_print_control(printer, lambda p: p.pause_print(), "paused")
+
+async def do_resume(printer):
+    await do_print_control(printer, lambda p: p.resume_print(), "resumed")
+
 async def do_print(printer, filename):
     mqtt, http = await create_servers()
     connected = await printer.connect(mqtt, http)
@@ -150,6 +183,10 @@ def main():
     parser_print = subparsers.add_parser('print', help='Start printing a file already present on the printer')
     parser_print.add_argument('filename', help='File to print')
 
+    subparsers.add_parser('stop', help='Stop the current print')
+    subparsers.add_parser('pause', help='Pause the current print')
+    subparsers.add_parser('resume', help='Resume a paused print')
+
     parser_connect_mqtt = subparsers.add_parser('connect-mqtt', help='Connect printer to particular MQTT server')
     parser_connect_mqtt.add_argument('address', help='MQTT host and port, e.g. "192.168.1.33:1883" or "mqtt.local:1883"')
 
@@ -193,6 +230,16 @@ def main():
 
     if args.command == "watch":
         do_watch(printer, interval=args.interval, broadcast=broadcast)
+        sys.exit(0)
+
+    if args.command == "stop":
+        asyncio.run(do_stop(printer))
+        sys.exit(0)
+    elif args.command == "pause":
+        asyncio.run(do_pause(printer))
+        sys.exit(0)
+    elif args.command == "resume":
+        asyncio.run(do_resume(printer))
         sys.exit(0)
 
     logging.info(f'Printer: {printer.describe()} ({printer.addr[0]})')
