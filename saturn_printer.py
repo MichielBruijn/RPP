@@ -85,8 +85,13 @@ class SaturnPrinter:
     # Find a specific printer at the given address, return a SaturnPrinter object
     # or None if no response is obtained
     def find_printer(addr, timeout=5):
-        printers = SaturnPrinter.find_printers(broadcast=addr)
-        if len(printers) == 0 or printers[0].addr[0] != addr:
+        import socket as _socket
+        try:
+            resolved = _socket.getaddrinfo(addr, None)[0][4][0]
+        except Exception:
+            resolved = addr
+        printers = SaturnPrinter.find_printers(broadcast=resolved)
+        if len(printers) == 0 or printers[0].addr[0] != resolved:
             return None
         return printers[0]
 

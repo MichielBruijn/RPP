@@ -23,7 +23,7 @@ function loadPrinterIP() {
 // Save the IP address to the server
 function saveIP() {
     let ipField = document.getElementById('printer-ip');
-    let saveBtn = document.querySelector('.save-ip-btn');
+    let saveBtn = document.querySelector('.btn-save');
     let newIP = ipField.value;
 
     fetch('/set-printer-ip', {
@@ -34,25 +34,25 @@ function saveIP() {
         .then(response => response.json())
         .then(data => {
             if (data.message) {
-                alert('Printer IP updated!');
-                ipField.readOnly = true; // Make IP field read-only again
-                saveBtn.style.display = 'none'; // Hide Save button
+                alert('Printer adres opgeslagen!');
+                ipField.readOnly = true;
+                saveBtn.style.display = 'none';
             } else {
                 console.error('Error saving IP:', data.error);
+                alert('Fout bij opslaan: ' + data.error);
             }
         });
 }
 
-// Enable editing of the IP field
 function editIP() {
     let ipField = document.getElementById('printer-ip');
-    let saveBtn = document.querySelector('.save-ip-btn');
+    let saveBtn = document.querySelector('.btn-save');
 
     ipField.readOnly = false;
     ipField.focus();
     ipField.select();
 
-    saveBtn.style.display = 'inline-block'; // Show Save button
+    saveBtn.style.display = 'inline-block';
 }
 
 function uploadFile() {

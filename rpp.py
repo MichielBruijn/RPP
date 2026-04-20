@@ -62,7 +62,7 @@ def print_status():
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         output = result.stdout.strip()
 
-        is_online = printer_ip in output
+        is_online = result.returncode == 0 and bool(output)
 
         match = re.search(r'Layers: (\d+)/(\d+)', output)
         if match:
